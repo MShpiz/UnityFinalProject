@@ -4,7 +4,7 @@ using UnityEngine;
 using Ink.Runtime;
 using TMPro;
 using System;
-using UnityEngine.EventSystems;
+using Ink.UnityIntegration;
 
 public class DialogManager : MonoBehaviour
 {
@@ -12,14 +12,25 @@ public class DialogManager : MonoBehaviour
 
     private Story currentStory;
     private bool _isDialogPlaying = false;
+    private DialogVariables _dialogVariables;
 
+    [Header("Dialog UI objects")]
     [SerializeField] private GameObject _dialogArea;
     [SerializeField] private TextMeshProUGUI _dialogText;
     [SerializeField] private TextMeshProUGUI _nameText;
+    
+
+    [Header("Choices UI")]
+    [SerializeField] private GameObject[] choiceBtns;
+    private TextMeshProUGUI[] choiceText;
+    public Func<int> onDialogStart; 
+    public Func<int> onDialogEnd;
+
+    [Header("VariableFiles")]
+    [SerializeField] private TextAsset _variables;
 
     public static DialogManager getInstance()
     {
-        
         return instance;
     }
     public void palyDialog(TextAsset JSONStory)
@@ -27,14 +38,28 @@ public class DialogManager : MonoBehaviour
         
         if (_isDialogPlaying)
         {
-            
             Debug.Log("trying to start a new dialog while current one is playing");
             throw new InvalidOperationException("other dialog currently playing");
         }
         currentStory = new Story(JSONStory.text);
-        
+
+        _dialogVariables.Observe(currentStory);
+
         _isDialogPlaying = true;
         Debug.Log(_isDialogPlaying);
+        try
+        {
+            onDialogStart.Invoke();
+        } 
+        catch (NullReferenceException e)
+        {
+            Debug.LogException(e);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+
         _dialogArea.SetActive(true);
        
     }
@@ -45,11 +70,31 @@ public class DialogManager : MonoBehaviour
         {            
             _dialogText.text = currentStory.Continue();
             handleDialogTags(currentStory.currentTags);
+            displayChoices();
         }
         else
         {
-            clearDialogArea();
+            finnishDialog();
         }
+    }
+
+    void finnishDialog()
+    {
+         clearDialogArea();
+            try
+            {
+                onDialogEnd.Invoke();
+            }
+            catch (NullReferenceException e)
+            {
+                Debug.LogException(e);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            _dialogVariables.StopObserving(currentStory);
+        currentStory = null;
     }
 
     void handleDialogTags(List<String> tags)
@@ -74,6 +119,8 @@ public class DialogManager : MonoBehaviour
 
         }
     }
+
+    
 
     void clearDialogArea()
     {
@@ -104,11 +151,62 @@ public class DialogManager : MonoBehaviour
         }
         currentStory = null;
         clearDialogArea();
+        _dialogVariables = new DialogVariables(_variables);
     }
 
     private void Start()
     {
-        
+        choiceText = new TextMeshProUGUI[choiceBtns.Length];
+        int index = 0;
+        foreach (GameObject choice in choiceBtns)
+        {
+            try
+            {
+                choiceText[index] = choice.GetComponentInChildren<TextMeshProUGUI>();
+            } catch (NullReferenceException e)
+            {
+                Debug.LogException(e);
+                continue;
+            } catch (Exception e)
+            {
+                Debug.LogException(e);
+                continue;
+            }
+            index++;
+        }
+
+    }
+
+    void displayChoices()
+    {
+        List<Choice> currChoice = currentStory.currentChoices;
+        if (currChoice.Count > choiceText.Length)
+        {
+            Debug.LogError("not enough choice buttons");
+        }
+
+        int idx = 0;
+        for (; idx < currChoice.Count && idx < choiceText.Length; ++idx)
+        {
+            choiceBtns[idx].gameObject.SetActive(true);
+            choiceText[idx].text = currChoice[idx].text;
+        }
+
+        for (; idx < choiceText.Length; ++idx)
+        {
+            choiceBtns[idx].gameObject.SetActive(false);
+        }
+    }
+
+    public Ink.Runtime.Object getDialogVariable(string name)
+    {
+        Ink.Runtime.Object result;
+        _dialogVariables.variables.TryGetValue(name, out result);
+        if (result == null)
+        {
+            Debug.LogError($"no such variable {name}");
+        }
+        return result;
     }
 
 

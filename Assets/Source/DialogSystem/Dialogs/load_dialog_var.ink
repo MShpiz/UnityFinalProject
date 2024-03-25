@@ -1,0 +1,1 @@
+INCLUDE dialog_var.ink
