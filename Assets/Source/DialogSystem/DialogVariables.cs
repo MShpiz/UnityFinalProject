@@ -10,8 +10,6 @@ public class DialogVariables
     public Dictionary<string, Ink.Runtime.Object> variables { get; private set; }
     private Story _variablesStory;
 
-    
-
     public DialogVariables(TextAsset loadGlobalsJSON)
     {
         variables = new Dictionary<string, Ink.Runtime.Object>();

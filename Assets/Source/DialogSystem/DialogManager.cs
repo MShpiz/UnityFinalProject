@@ -47,25 +47,29 @@ public class DialogManager : MonoBehaviour
 
         _isDialogPlaying = true;
         Debug.Log(_isDialogPlaying);
-        try
+        Debug.Log("here");
+        /*try
         {
             onDialogStart.Invoke();
         } 
         catch (NullReferenceException e)
         {
-            Debug.LogException(e);
+            Debug.LogWarning(e);
         }
         catch (Exception e)
         {
-            Debug.LogException(e);
-        }
+            Debug.LogWarning(e);
+        }*/
 
         _dialogArea.SetActive(true);
-       
+        Debug.Log("here");
+        playNextDialogLine();
+
     }
 
      void playNextDialogLine()
     {
+        
         if (currentStory.canContinue)
         {            
             _dialogText.text = currentStory.Continue();
@@ -211,13 +215,13 @@ public class DialogManager : MonoBehaviour
 
 
 
-    private int cnt = 0;
+    //private int cnt = 0;
     void Update()
     {
-        if (_isDialogPlaying && cnt % 1000 == 0)
+        if (_isDialogPlaying && InputManager.GetInstance().GetSubmitPressed())
         {
             playNextDialogLine();
         }
-        cnt += 1;
+        //cnt += 1;
     }
 }
